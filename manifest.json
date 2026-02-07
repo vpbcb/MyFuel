@@ -1,7 +1,7 @@
 ﻿{
   "name": "Fuel Calculator PWA",
   "short_name": "MyFuel",
-  "start_url": "./Indexfuel.html",
+  "start_url": "./indexfuel.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#2196F3",
@@ -17,4 +17,5 @@
       "type": "image/png"
     }
   ]
+
 }
