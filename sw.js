@@ -1,22 +1,18 @@
-const CACHE_NAME = 'myfuel-v5'; // Новая версия кэша
+const CACHE_NAME = 'myfuel-v6'; // Версия 4
 const ASSETS_TO_CACHE = [
-    './index.html',   // ИСПРАВЛЕНО: теперь с маленькой буквы
-    './FuelIcon.png',     // Ваша картинка 192x192
+    './index.html',       // Теперь index.html
+    './FuelIcon.png',
     './manifest.json'
 ];
 
-// Установка
 self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => {
-                return cache.addAll(ASSETS_TO_CACHE);
-            })
+            .then((cache) => cache.addAll(ASSETS_TO_CACHE))
     );
 });
 
-// Активация и удаление старого кэша
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((cacheNames) => {
@@ -32,12 +28,9 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
-// Перехват запросов
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .catch(() => caches.match(event.request))
     );
 });
-
-
