@@ -1,0 +1,980 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Расчет топлива</title>
+    
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2196F3">
+    <link rel="apple-touch-icon" href="FuelIcon.png">
+
+    <style>
+        :root {
+            --primary-blue: #2196F3;
+            --dark-blue-text: #1565C0;
+            --light-blue-bg: #E3F2FD;
+            --bg-body: #ffffff;
+            --gray-pill-bg: #f3f4f6; 
+            --orange-pill-bg: #FF9800;
+            --header-bg-gray: #e8eaed; 
+            --input-border: #e0e0e0;
+            --text-main: #000;
+            --status-green: #C8E6C9;
+            --status-red: #FFCDD2;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-body);
+            margin: 0;
+            padding: 10px;
+            padding-bottom: 20px;
+            color: var(--text-main);
+        }
+
+        .app-wrapper {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Убираем стрелочки в input number */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        /* HEADER */
+        .main-header {
+            background-color: var(--primary-blue);
+            border-radius: 15px; 
+            padding: 8px 15px; 
+            display: flex;
+            align-items: center; 
+            margin-bottom: 10px; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            width: 100%; 
+        }
+
+        .title-wrapper {
+            flex-grow: 1; 
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+            padding-right: 10px; 
+        }
+
+        .header-icon {
+            width: 32px;
+            height: 32px;
+            fill: white;
+            margin-right: 12px;
+        }
+
+        .header-title {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        /* КНОПКА ОБНОВЛЕНИЯ */
+        .btn-reset {
+            background: transparent;
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            flex-shrink: 0; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        .btn-reset svg {
+            width: 28px;
+            height: 28px;
+            fill: white;
+        }
+
+        /* CARDS */
+        .section-card {
+            border: 1px solid #eee;
+            border-radius: 20px;
+            padding: 10px;
+            margin-bottom: 8px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.03);
+        }
+
+        /* ЗАГОЛОВКИ */
+        .section-header-bar {
+            background-color: var(--light-blue-bg);
+            width: 100%;
+            border-radius: 15px;
+            padding: 4px 0;
+            margin-bottom: 12px; 
+            margin-top: 0;
+            text-align: center;
+            border: 1px solid #BBDEFB;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 800;
+            margin: 0;
+            color: var(--dark-blue-text);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* INPUTS & SELECTS */
+        input, select {
+            border: 1px solid transparent; 
+            outline: none;
+            font-size: 16px;
+            background-color: white; 
+            color: #333;
+            border-radius: 10px;
+            padding: 0 5px;
+            height: 30px; 
+            width: 100%;
+            text-align: center; 
+            font-weight: 600; /* Жирный шрифт */
+        }
+       
+        input::placeholder { color: #ccc; font-style: italic; font-weight: normal; }
+        
+        /* Убираем серый фон у ReadOnly */
+        input:read-only { 
+            color: #000; 
+            background-color: #fff;
+        }
+        
+        .input-bordered { border: 1px solid #ddd; }
+
+        /* Цвета статусов */
+        .bg-green { background-color: var(--status-green) !important; color: #1B5E20; }
+        .bg-red { background-color: var(--status-red) !important; color: #B71C1C; }
+
+        /* LAYOUT */
+        .top-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px; 
+        }
+
+        .col {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ROWS */
+        .input-row-gray {
+            background-color: var(--gray-pill-bg);
+            border-radius: 20px; 
+            padding: 5px 8px 5px 15px; 
+            display: flex;
+            align-items: center; 
+            justify-content: space-between;
+            margin-bottom: 10px; 
+        }
+
+        .tile-gray {
+            background-color: var(--gray-pill-bg);
+            border-radius: 20px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column; 
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            height: 100%;
+        }
+
+        .input-row-orange {
+            background-color: var(--orange-pill-bg);
+            border-radius: 20px; 
+            padding: 5px 8px 5px 15px; 
+            display: flex;
+            align-items: center; 
+            justify-content: space-between;
+            margin-bottom: 10px; 
+        }
+        
+        /* По умолчанию Total Fuel белый */
+        #totalFuel { background-color: #fff; }
+
+        .label-left {
+            font-size: 15px;
+            font-weight: bold;
+            color: black;
+            margin-right: 10px;
+            white-space: nowrap; 
+            width: 110px; 
+            flex-shrink: 0;
+        }
+
+        .label-tile {
+            font-size: 14px;
+            font-weight: bold;
+            color: black;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            margin-bottom: 2px;
+        }
+       
+        .cont-inputs { display: flex; gap: 5px; width: 100%; }
+
+        /* FOOTER */
+        .footer-gray-bar {
+            background-color: var(--gray-pill-bg);
+            border-radius: 20px;
+            padding: 8px 10px;
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .footer-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .label-footer {
+            font-size: 12px;
+            font-weight: bold;
+            line-height: 1.1;
+            white-space: normal;
+            text-align: center;
+            margin-right: 2px;
+            min-width: 65px;
+        }
+
+        /* WEIGHTS */
+        .weights-grid {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .weights-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .label-weight {
+            width: 50px; 
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .alert-text { color: red !important; font-weight: 900 !important; }
+
+        /* HELP ICON */
+        .help-icon {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background-color: var(--primary-blue);
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            display: none; 
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); 
+            z-index: 2000; 
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            width: 85%;
+            max-width: 350px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            text-align: center;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+            border: none;
+            background: none;
+        }
+
+        .modal-title {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 10px;
+            display: block;
+            color: var(--primary-blue);
+        }
+
+        /* Ambiguity List Style */
+        .ambiguity-list {
+            text-align: left;
+            margin-top: 10px;
+        }
+        .ambiguity-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            color: #2196F3;
+            font-weight: bold;
+            font-size: 15px;
+        }
+        .ambiguity-item:last-child { border-bottom: none; }
+        .ambiguity-item:hover { background-color: #f9f9f9; }
+
+        /* UPDATE NOTIFICATION */
+        .update-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .update-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #2196F3;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+
+    <div class="main-header">
+        <div class="title-wrapper">
+            <svg class="header-icon" viewBox="0 0 24 24">
+                <path d="M19.77 7.23l.01-.01-3.72-3.72L15 4.56l2.11 2.11c-.94.36-1.61 1.26-1.61 2.33a2.5 2.5 0 0 0 2.5 2.5c.36 0 .69-.08 1-.21v7.21c0 .55-.45 1-1 1s-1-.45-1-1V14a2 2 0 0 0-2-2h-1V5c0-1.1-.9-2-2-2H6c-1.1 0-2 .9-2 2v16h10v-7.5h1.5v5a2.5 2.5 0 0 0 5 0V9c0-.69-.28-1.32-.73-1.77zM12 10H6V5h6v5zm6 0c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/>
+            </svg>
+            <span id="headerTitle" class="header-title">Расчет топлива</span>
+        </div>
+        <button class="btn-reset" onclick="resetAll()">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 6v3l4-4-4-4v3c-4.42 0-8 3.58-8 8 0 1.57.46 3.03 1.24 4.26L6.7 14.8c-.45-.83-.7-1.79-.7-2.8 0-3.31 2.69-6 6-6zm6.76 1.74L17.3 9.2c.44.84.7 1.79.7 2.8 0 3.31-2.69 6-6 6v-3l-4 4 4 4v-3c4.42 0 8-3.58 8-8 0-1.57-.46-3.03-1.24-4.26z"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="section-card">
+        <div class="section-header-bar">
+            <h2 id="acSectionTitle" class="section-title">Aircraft</h2>
+        </div>
+
+        <div class="top-row">
+            <div class="col">
+                <div class="tile-gray">
+                    <div class="label-tile">
+                        <span>Поиск ВС</span>
+                        <span class="help-icon" onclick="toggleHelp()">?</span>
+                    </div>
+                    <input type="text" id="acSearch" placeholder="Номер/Имя" class="nav-input"
+                           onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                           onblur="this.placeholder=this.dataset.ph"
+                           oninput="searchAircraft()">
+                </div>
+            </div>
+            <div class="col">
+                <div class="tile-gray">
+                    <span class="label-tile">Числ. экипажа</span>
+                    <select id="crew" class="nav-input" onchange="calculateAll()">
+                        </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="top-row">
+            <div class="col">
+                <div class="tile-gray">
+                    <span class="label-tile">DOW</span>
+                    <input type="number" id="dow" readonly>
+                </div>
+            </div>
+            <div class="col">
+                <div class="tile-gray">
+                    <span class="label-tile">DOI</span>
+                    <input type="number" id="doi" readonly>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Payload</span>
+            <input type="number" id="payload" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">ZFW</span>
+            <input type="number" id="zfw" readonly>
+        </div>
+    </div>
+
+
+    <div class="section-card">
+        <div class="section-header-bar">
+            <h2 class="section-title">Fuel</h2>
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Trip Fuel</span>
+            <input type="number" id="trip" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Cont.fuel</span>
+            <div class="cont-inputs">
+                <select id="contPerc" class="nav-input" style="width: 70px;" onchange="calcContFromPerc()">
+                    <option value="3" selected>3%</option>
+                    <option value="5">5%</option>
+                    <option value="10">10%</option>
+                </select>
+                <input type="number" id="contVal" readonly>
+            </div>
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Alternate</span>
+            <input type="number" id="alt" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Final reserve</span>
+            <input type="number" id="final" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Extra</span>
+            <input type="number" id="extra" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">APU/Taxi</span>
+            <input type="number" id="taxi" placeholder="12500" class="nav-input"
+                   onfocus="this.dataset.ph=this.placeholder;this.placeholder=''" 
+                   onblur="this.placeholder=this.dataset.ph"
+                   oninput="calculateAll()">
+        </div>
+
+        <div class="input-row-orange">
+            <span class="label-left">Total Fuel</span>
+            <input type="number" id="totalFuel" readonly style="font-weight: bold;">
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left">Max fuel (limit)</span>
+            <input type="number" id="maxFuel" readonly>
+        </div>
+
+        <div class="footer-gray-bar">
+            <div class="footer-item">
+                <span class="label-footer">Remain.<br>fuel</span>
+                <input type="number" id="remFuel" readonly>
+            </div>
+            <div class="footer-item">
+                <span class="label-footer">Minimum<br>deviation</span>
+                <input type="number" id="minDev" readonly>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="section-card">
+        <div class="section-header-bar">
+            <h2 class="section-title">Weights</h2>
+        </div>
+
+        <div class="weights-grid">
+            <div class="weights-col">
+                <div class="input-row-gray">
+                    <span class="label-left label-weight">TOW</span>
+                    <input type="number" id="tow" readonly>
+                </div>
+                <div class="input-row-gray">
+                    <span class="label-left label-weight">MTOW</span>
+                    <input type="number" id="mtow" readonly>
+                </div>
+            </div>
+            <div class="weights-col">
+                <div class="input-row-gray">
+                    <span class="label-left label-weight">LW</span>
+                    <input type="number" id="lw" readonly>
+                </div>
+                <div class="input-row-gray">
+                    <span class="label-left label-weight">MLW</span>
+                    <input type="number" id="mlw" readonly>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-row-gray">
+            <span class="label-left" style="text-align: center;">RTOW</span>
+            <input type="number" id="rtow" readonly>
+        </div>
+    </div>
+
+</div>
+
+<div id="helpModal" class="modal-overlay" onclick="toggleHelp()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="modal-close-btn" onclick="toggleHelp()">&times;</span>
+        <span class="modal-title">Как искать ВС</span>
+        <p>
+            Для поиска ВС введите цифры бортового номера (например <b>73724</b> или просто <b>724</b>) без RA или Фамилию человека, в честь которого назван самолет (например <b>Гагарин</b>).
+        </p>
+    </div>
+</div>
+
+<div id="ambiguityModal" class="modal-overlay">
+    <div class="modal-content" onclick="event.stopPropagation()">
+        <span class="modal-close-btn" onclick="closeAmbiguity()">&times;</span>
+        <span class="modal-title">Требуется уточнение</span>
+        <div id="ambiguityList" class="ambiguity-list"></div>
+    </div>
+</div>
+
+<div id="updateNotification" class="update-overlay">
+    <div class="update-box">
+        <div style="margin-bottom: 10px; font-size: 30px;">↻</div>
+        Обновление данных.<br>Ждите...
+    </div>
+</div>
+
+<script>
+    // БАЗА ДАННЫХ
+    const aircraftDB = [{"reg": "73753", "regFull": "RA-73753", "name": "ретро ливрея", "nameDisplay": "Ретро ливрея", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44196.0, "doi": 52.09}, "2/5": {"dow": 44271.0, "doi": 53.06}, "3/4": {"dow": 44276.0, "doi": 51.05}, "3/5": {"dow": 44351.0, "doi": 52.01}}}, {"reg": "73749", "regFull": "RA-73749", "name": "skyteam(73749)", "nameDisplay": "SKYTEAM(73749)", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44335.0, "doi": 51.97}, "2/5": {"dow": 44410.0, "doi": 52.94}, "3/4": {"dow": 44415.0, "doi": 50.93}, "3/5": {"dow": 44490.0, "doi": 51.89}}}, {"reg": "73757", "regFull": "RA-73757", "name": "skyteam(73757)", "nameDisplay": "SKYTEAM(73757)", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44218.0, "doi": 52.32}, "2/5": {"dow": 44293.0, "doi": 53.29}, "3/4": {"dow": 44298.0, "doi": 51.28}, "3/5": {"dow": 44373.0, "doi": 52.24}}}, {"reg": "73724", "regFull": "RA-73724", "name": "александров", "nameDisplay": "Александров", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49619.0, "doi": 40.79}, "2/5": {"dow": 49544.0, "doi": 41.98}, "3/5": {"dow": 49624.0, "doi": 40.6}, "3/6": {"dow": 49699.0, "doi": 39.41}}}, {"reg": "73748", "regFull": "RA-73748", "name": "басов", "nameDisplay": "Басов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44435.0, "doi": 51.74}, "2/5": {"dow": 44510.0, "doi": 52.71}, "3/4": {"dow": 44515.0, "doi": 50.7}, "3/5": {"dow": 44590.0, "doi": 51.66}}}, {"reg": "73735", "regFull": "RA-73735", "name": "беллинсгаузен", "nameDisplay": "Беллинсгаузен", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45750.0, "doi": 47.29}, "2/5": {"dow": 45825.0, "doi": 47.29}, "3/4": {"dow": 45830.0, "doi": 47.29}, "3/5": {"dow": 45905.0, "doi": 47.29}}}, {"reg": "73177", "regFull": "RA-73177", "name": "белов", "nameDisplay": "Белов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49514.0, "doi": 40.12}, "2/5": {"dow": 49439.0, "doi": 41.31}, "3/5": {"dow": 49519.0, "doi": 39.93}, "3/6": {"dow": 49594.0, "doi": 38.74}}}, {"reg": "73161", "regFull": "RA-73161", "name": "бернес", "nameDisplay": "Бернес", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49519.0, "doi": 40.54}, "2/5": {"dow": 49444.0, "doi": 41.73}, "3/5": {"dow": 49524.0, "doi": 40.35}, "3/6": {"dow": 49599.0, "doi": 39.16}}}, {"reg": "73718", "regFull": "RA-73718", "name": "бондарчук", "nameDisplay": "Бондарчук", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49515.0, "doi": 39.54}, "2/5": {"dow": 49440.0, "doi": 40.73}, "3/5": {"dow": 49520.0, "doi": 39.35}, "3/6": {"dow": 49595.0, "doi": 38.16}}}, {"reg": "73771", "regFull": "RA-73771", "name": "бородин", "nameDisplay": "Бородин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43708.0, "doi": 51.68}, "2/5": {"dow": 43783.0, "doi": 52.65}, "3/4": {"dow": 43788.0, "doi": 50.64}, "3/5": {"dow": 43863.0, "doi": 51.6}}}, {"reg": "73778", "regFull": "RA-73778", "name": "брюсов", "nameDisplay": "Брюсов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43748.0, "doi": 52.35}, "2/5": {"dow": 43823.0, "doi": 53.32}, "3/4": {"dow": 43828.0, "doi": 51.31}, "3/5": {"dow": 43903.0, "doi": 52.27}}}, {"reg": "73703", "regFull": "RA-73703", "name": "вавилов", "nameDisplay": "Вавилов Н.", "type": "A321neo", "mtow": 93500, "mlw": 79200, "maxFuel": 20900.0, "perf": {"2/6": {"dow": 52457.0, "doi": 41.38}, "2/5": {"dow": 52382.0, "doi": 40.2}, "3/5": {"dow": 52462.0, "doi": 38.82}, "3/6": {"dow": 52537.0, "doi": 40.0}}}, {"reg": "73738", "regFull": "RA-73738", "name": "вавилов", "nameDisplay": "Вавилов С.", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44178.0, "doi": 50.21}, "2/5": {"dow": 44253.0, "doi": 51.18}, "3/4": {"dow": 44258.0, "doi": 49.17}, "3/5": {"dow": 44333.0, "doi": 50.13}}}, {"reg": "73160", "regFull": "RA-73160", "name": "вахтангов", "nameDisplay": "Вахтангов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50335.0, "doi": 35.78}, "2/5": {"dow": 50260.0, "doi": 36.97}, "3/5": {"dow": 50340.0, "doi": 35.59}, "3/6": {"dow": 50415.0, "doi": 34.4}}}, {"reg": "73176", "regFull": "RA-73176", "name": "вернадский", "nameDisplay": "Вернадский", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44214.0, "doi": 49.84}, "2/5": {"dow": 44289.0, "doi": 50.81}, "3/4": {"dow": 44294.0, "doi": 48.8}, "3/5": {"dow": 44369.0, "doi": 49.76}}}, {"reg": "73729", "regFull": "RA-73729", "name": "вертинский", "nameDisplay": "Вертинский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49619.0, "doi": 40.34}, "2/5": {"dow": 49544.0, "doi": 41.53}, "3/5": {"dow": 49624.0, "doi": 40.15}, "3/6": {"dow": 49699.0, "doi": 38.96}}}, {"reg": "73162", "regFull": "RA-73162", "name": "вишневская", "nameDisplay": "Вишневская", "type": "Unknown", "mtow": 79000, "mlw": 66000, "maxFuel": 18800.0, "perf": {}}, {"reg": "73758", "regFull": "RA-73758", "name": "вишневский", "nameDisplay": "Вишневский", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44358.0, "doi": 51.84}, "2/5": {"dow": 44433.0, "doi": 52.81}, "3/4": {"dow": 44438.0, "doi": 50.8}, "3/5": {"dow": 44513.0, "doi": 51.76}}}, {"reg": "73181", "regFull": "RA-73181", "name": "вознесенский", "nameDisplay": "Вознесенский", "type": "Unknown", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {}}, {"reg": "73723", "regFull": "RA-73723", "name": "волков", "nameDisplay": "Волков", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49645.0, "doi": 40.77}, "2/5": {"dow": 49570.0, "doi": 41.96}, "3/5": {"dow": 49650.0, "doi": 40.58}, "3/6": {"dow": 49725.0, "doi": 39.39}}}, {"reg": "73168", "regFull": "RA-73168", "name": "гагарин", "nameDisplay": "Гагарин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43821.0, "doi": 53.12}, "2/5": {"dow": 43896.0, "doi": 54.09}, "3/4": {"dow": 43901.0, "doi": 52.08}, "3/5": {"dow": 43976.0, "doi": 53.04}}}, {"reg": "73777", "regFull": "RA-73777", "name": "гайдай", "nameDisplay": "Гайдай", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43495.0, "doi": 52.3}, "2/5": {"dow": 43570.0, "doi": 53.27}, "3/4": {"dow": 43575.0, "doi": 51.26}, "3/5": {"dow": 43650.0, "doi": 52.22}}}, {"reg": "73170", "regFull": "RA-73170", "name": "герасимов", "nameDisplay": "Герасимов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43728.0, "doi": 51.86}, "2/5": {"dow": 43803.0, "doi": 52.83}, "3/4": {"dow": 43808.0, "doi": 50.82}, "3/5": {"dow": 43883.0, "doi": 51.78}}}, {"reg": "73764", "regFull": "RA-73764", "name": "герман", "nameDisplay": "Герман", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43736.0, "doi": 51.83}, "2/5": {"dow": 43811.0, "doi": 52.8}, "3/4": {"dow": 43816.0, "doi": 50.79}, "3/5": {"dow": 43891.0, "doi": 51.75}}}, {"reg": "73780", "regFull": "RA-73780", "name": "глазунов", "nameDisplay": "Глазунов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43820.0, "doi": 52.58}, "2/5": {"dow": 43895.0, "doi": 53.55}, "3/4": {"dow": 43900.0, "doi": 51.54}, "3/5": {"dow": 43975.0, "doi": 52.5}}}, {"reg": "73704", "regFull": "RA-73704", "name": "годенко", "nameDisplay": "Годенко", "type": "A321neo", "mtow": 93500, "mlw": 79200, "maxFuel": 20900.0, "perf": {"2/6": {"dow": 52608.0, "doi": 40.53}, "2/5": {"dow": 52533.0, "doi": 39.35}, "3/5": {"dow": 52613.0, "doi": 37.97}, "3/6": {"dow": 52688.0, "doi": 39.15}}}, {"reg": "73166", "regFull": "RA-73166", "name": "гомельский", "nameDisplay": "Гомельский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49519.0, "doi": 40.53}, "2/5": {"dow": 49444.0, "doi": 41.72}, "3/5": {"dow": 49524.0, "doi": 40.34}, "3/6": {"dow": 49599.0, "doi": 39.15}}}, {"reg": "73713", "regFull": "RA-73713", "name": "гончаров", "nameDisplay": "Гончаров", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49714.0, "doi": 41.15}, "2/5": {"dow": 49639.0, "doi": 42.34}, "3/5": {"dow": 49719.0, "doi": 40.96}, "3/6": {"dow": 49794.0, "doi": 39.77}}}, {"reg": "73708", "regFull": "RA-73708", "name": "гризодубова", "nameDisplay": "Гризодубова", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50153.0, "doi": 36.68}, "2/5": {"dow": 50078.0, "doi": 37.87}, "3/5": {"dow": 50158.0, "doi": 36.49}, "3/6": {"dow": 50233.0, "doi": 35.3}}}, {"reg": "73740", "regFull": "RA-73740", "name": "джалиль", "nameDisplay": "Джалиль", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44098.0, "doi": 50.18}, "2/5": {"dow": 44173.0, "doi": 51.15}, "3/4": {"dow": 44178.0, "doi": 49.14}, "3/5": {"dow": 44253.0, "doi": 50.1}}}, {"reg": "73730", "regFull": "RA-73730", "name": "добрынин", "nameDisplay": "Добрынин", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45800.0, "doi": 47.6}, "2/5": {"dow": 45875.0, "doi": 47.6}, "3/4": {"dow": 45880.0, "doi": 47.6}, "3/5": {"dow": 45955.0, "doi": 47.6}}}, {"reg": "73779", "regFull": "RA-73779", "name": "довлатов", "nameDisplay": "Довлатов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43811.0, "doi": 52.47}, "2/5": {"dow": 43886.0, "doi": 53.44}, "3/4": {"dow": 43891.0, "doi": 51.43}, "3/5": {"dow": 43966.0, "doi": 52.39}}}, {"reg": "73765", "regFull": "RA-73765", "name": "достоевский", "nameDisplay": "Достоевский", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43776.0, "doi": 51.5}, "2/5": {"dow": 43851.0, "doi": 52.47}, "3/4": {"dow": 43856.0, "doi": 50.46}, "3/5": {"dow": 43931.0, "doi": 51.42}}}, {"reg": "73712", "regFull": "RA-73712", "name": "дунаевский", "nameDisplay": "Дунаевский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50232.0, "doi": 39.51}, "2/5": {"dow": 50157.0, "doi": 40.7}, "3/5": {"dow": 50237.0, "doi": 39.32}, "3/6": {"dow": 50312.0, "doi": 38.13}}}, {"reg": "73164", "regFull": "RA-73164", "name": "дягилев", "nameDisplay": "Дягилев", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50250.0, "doi": 37.03}, "2/5": {"dow": 50175.0, "doi": 38.22}, "3/5": {"dow": 50255.0, "doi": 36.84}, "3/6": {"dow": 50330.0, "doi": 35.65}}}, {"reg": "73760", "regFull": "RA-73760", "name": "егоров", "nameDisplay": "Егоров", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44256.0, "doi": 51.62}, "2/5": {"dow": 44331.0, "doi": 52.59}, "3/4": {"dow": 44336.0, "doi": 50.58}, "3/5": {"dow": 44411.0, "doi": 51.54}}}, {"reg": "73763", "regFull": "RA-73763", "name": "жуков", "nameDisplay": "Жуков", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44308.0, "doi": 52.58}, "2/5": {"dow": 44383.0, "doi": 53.55}, "3/4": {"dow": 44388.0, "doi": 51.54}, "3/5": {"dow": 44463.0, "doi": 52.5}}}, {"reg": "73732", "regFull": "RA-73732", "name": "жуковский", "nameDisplay": "Жуковский", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45792.0, "doi": 47.35}, "2/5": {"dow": 45867.0, "doi": 47.35}, "3/4": {"dow": 45872.0, "doi": 47.35}, "3/5": {"dow": 45947.0, "doi": 47.35}}}, {"reg": "73715", "regFull": "RA-73715", "name": "зощенко", "nameDisplay": "Зощенко", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49744.0, "doi": 40.52}, "2/5": {"dow": 49669.0, "doi": 41.71}, "3/5": {"dow": 49749.0, "doi": 40.33}, "3/6": {"dow": 49824.0, "doi": 39.14}}}, {"reg": "73180", "regFull": "RA-73180", "name": "иоффе", "nameDisplay": "Иоффе", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43901.0, "doi": 51.99}, "2/5": {"dow": 43976.0, "doi": 52.96}, "3/4": {"dow": 43981.0, "doi": 50.95}, "3/5": {"dow": 44056.0, "doi": 51.91}}}, {"reg": "73759", "regFull": "RA-73759", "name": "комаров", "nameDisplay": "Комаров", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44288.0, "doi": 52.06}, "2/5": {"dow": 44363.0, "doi": 53.03}, "3/4": {"dow": 44368.0, "doi": 51.02}, "3/5": {"dow": 44443.0, "doi": 51.98}}}, {"reg": "73733", "regFull": "RA-73733", "name": "лазарев", "nameDisplay": "Лазарев", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45623.0, "doi": 48.98}, "2/5": {"dow": 45698.0, "doi": 48.98}, "3/4": {"dow": 45703.0, "doi": 48.98}, "3/5": {"dow": 45778.0, "doi": 48.98}}}, {"reg": "73721", "regFull": "RA-73721", "name": "левитан", "nameDisplay": "Левитан", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49738.0, "doi": 40.91}, "2/5": {"dow": 49663.0, "doi": 42.1}, "3/5": {"dow": 49743.0, "doi": 40.72}, "3/6": {"dow": 49818.0, "doi": 39.53}}}, {"reg": "73767", "regFull": "RA-73767", "name": "левитан", "nameDisplay": "Левитан", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43884.0, "doi": 52.22}, "2/5": {"dow": 43959.0, "doi": 53.19}, "3/4": {"dow": 43964.0, "doi": 51.18}, "3/5": {"dow": 44039.0, "doi": 52.14}}}, {"reg": "73781", "regFull": "RA-73781", "name": "лиепа", "nameDisplay": "Лиепа", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43776.0, "doi": 52.99}, "2/5": {"dow": 43851.0, "doi": 53.96}, "3/4": {"dow": 43856.0, "doi": 51.95}, "3/5": {"dow": 43931.0, "doi": 52.91}}}, {"reg": "73755", "regFull": "RA-73755", "name": "лихачёв", "nameDisplay": "Лихачёв", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44418.0, "doi": 51.73}, "2/5": {"dow": 44493.0, "doi": 52.7}, "3/4": {"dow": 44498.0, "doi": 50.69}, "3/5": {"dow": 44573.0, "doi": 51.65}}}, {"reg": "73739", "regFull": "RA-73739", "name": "лобачевский", "nameDisplay": "Лобачевский", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44192.0, "doi": 50.09}, "2/5": {"dow": 44267.0, "doi": 51.06}, "3/4": {"dow": 44272.0, "doi": 49.05}, "3/5": {"dow": 44347.0, "doi": 50.01}}}, {"reg": "73710", "regFull": "RA-73710", "name": "любимов", "nameDisplay": "Любимов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50231.0, "doi": 38.75}, "2/5": {"dow": 50156.0, "doi": 39.94}, "3/5": {"dow": 50236.0, "doi": 38.56}, "3/6": {"dow": 50311.0, "doi": 37.37}}}, {"reg": "73769", "regFull": "RA-73769", "name": "малевич", "nameDisplay": "Малевич", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43884.0, "doi": 52.86}, "2/5": {"dow": 43959.0, "doi": 53.83}, "3/4": {"dow": 43964.0, "doi": 51.82}, "3/5": {"dow": 44039.0, "doi": 52.78}}}, {"reg": "73175", "regFull": "RA-73175", "name": "маршак", "nameDisplay": "Маршак", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43838.0, "doi": 51.92}, "2/5": {"dow": 43913.0, "doi": 52.89}, "3/4": {"dow": 43918.0, "doi": 50.88}, "3/5": {"dow": 43993.0, "doi": 51.84}}}, {"reg": "73754", "regFull": "RA-73754", "name": "мейерхольд", "nameDisplay": "Мейерхольд", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44440.0, "doi": 51.8}, "2/5": {"dow": 44515.0, "doi": 52.77}, "3/4": {"dow": 44520.0, "doi": 50.76}, "3/5": {"dow": 44595.0, "doi": 51.72}}}, {"reg": "73727", "regFull": "RA-73727", "name": "менделеев", "nameDisplay": "Менделеев", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49624.0, "doi": 40.23}, "2/5": {"dow": 49549.0, "doi": 41.42}, "3/5": {"dow": 49629.0, "doi": 40.04}, "3/6": {"dow": 49704.0, "doi": 38.85}}}, {"reg": "73746", "regFull": "RA-73746", "name": "мечников", "nameDisplay": "Мечников", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44405.0, "doi": 52.82}, "2/5": {"dow": 44480.0, "doi": 53.79}, "3/4": {"dow": 44485.0, "doi": 51.78}, "3/5": {"dow": 44560.0, "doi": 52.74}}}, {"reg": "73734", "regFull": "RA-73734", "name": "мешалкин", "nameDisplay": "Мешалкин", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45680.0, "doi": 48.69}, "2/5": {"dow": 45755.0, "doi": 48.69}, "3/4": {"dow": 45760.0, "doi": 48.69}, "3/5": {"dow": 45835.0, "doi": 48.69}}}, {"reg": "73165", "regFull": "RA-73165", "name": "михалков", "nameDisplay": "Михалков", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50225.0, "doi": 36.53}, "2/5": {"dow": 50150.0, "doi": 37.72}, "3/5": {"dow": 50230.0, "doi": 36.34}, "3/6": {"dow": 50305.0, "doi": 35.15}}}, {"reg": "73706", "regFull": "RA-73706", "name": "мичурин", "nameDisplay": "Мичурин", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50265.0, "doi": 36.34}, "2/5": {"dow": 50190.0, "doi": 37.53}, "3/5": {"dow": 50270.0, "doi": 36.15}, "3/6": {"dow": 50345.0, "doi": 34.96}}}, {"reg": "73178", "regFull": "RA-73178", "name": "набоков", "nameDisplay": "Набоков", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49667.0, "doi": 40.55}, "2/5": {"dow": 49592.0, "doi": 41.74}, "3/5": {"dow": 49672.0, "doi": 40.36}, "3/6": {"dow": 49747.0, "doi": 39.17}}}, {"reg": "73711", "regFull": "RA-73711", "name": "немирович-данченко", "nameDisplay": "Немирович-Данченко", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50415.0, "doi": 38.25}, "2/5": {"dow": 50340.0, "doi": 39.44}, "3/5": {"dow": 50420.0, "doi": 38.06}, "3/6": {"dow": 50495.0, "doi": 36.87}}}, {"reg": "73744", "regFull": "RA-73744", "name": "николаев", "nameDisplay": "Николаев", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44193.0, "doi": 50.12}, "2/5": {"dow": 44268.0, "doi": 51.09}, "3/4": {"dow": 44273.0, "doi": 49.08}, "3/5": {"dow": 44348.0, "doi": 50.04}}}, {"reg": "73179", "regFull": "RA-73179", "name": "паустовский", "nameDisplay": "Паустовский", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43901.0, "doi": 51.67}, "2/5": {"dow": 43976.0, "doi": 52.64}, "3/4": {"dow": 43981.0, "doi": 50.63}, "3/5": {"dow": 44056.0, "doi": 51.59}}}, {"reg": "73707", "regFull": "RA-73707", "name": "пирогов", "nameDisplay": "Пирогов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50383.0, "doi": 35.73}, "2/5": {"dow": 50308.0, "doi": 36.92}, "3/5": {"dow": 50388.0, "doi": 35.54}, "3/6": {"dow": 50463.0, "doi": 34.35}}}, {"reg": "73172", "regFull": "RA-73172", "name": "поддубный", "nameDisplay": "Поддубный", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43845.0, "doi": 52.23}, "2/5": {"dow": 43920.0, "doi": 53.2}, "3/4": {"dow": 43925.0, "doi": 51.19}, "3/5": {"dow": 44000.0, "doi": 52.15}}}, {"reg": "73762", "regFull": "RA-73762", "name": "попович", "nameDisplay": "Попович", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44331.0, "doi": 51.44}, "2/5": {"dow": 44406.0, "doi": 52.41}, "3/4": {"dow": 44411.0, "doi": 50.4}, "3/5": {"dow": 44486.0, "doi": 51.36}}}, {"reg": "73770", "regFull": "RA-73770", "name": "прокофьев", "nameDisplay": "Прокофьев", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43756.0, "doi": 52.03}, "2/5": {"dow": 43831.0, "doi": 53.0}, "3/4": {"dow": 43836.0, "doi": 50.99}, "3/5": {"dow": 43911.0, "doi": 51.95}}}, {"reg": "73726", "regFull": "RA-73726", "name": "рахманинов", "nameDisplay": "Рахманинов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49609.0, "doi": 40.28}, "2/5": {"dow": 49534.0, "doi": 41.47}, "3/5": {"dow": 49614.0, "doi": 40.09}, "3/6": {"dow": 49689.0, "doi": 38.9}}}, {"reg": "73774", "regFull": "RA-73774", "name": "репин", "nameDisplay": "Репин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43636.0, "doi": 51.82}, "2/5": {"dow": 43711.0, "doi": 52.79}, "3/4": {"dow": 43716.0, "doi": 50.78}, "3/5": {"dow": 43791.0, "doi": 51.74}}}, {"reg": "73716", "regFull": "RA-73716", "name": "рихтер", "nameDisplay": "Рихтер", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50045.0, "doi": 38.53}, "2/5": {"dow": 49970.0, "doi": 39.72}, "3/5": {"dow": 50050.0, "doi": 38.34}, "3/6": {"dow": 50125.0, "doi": 37.15}}}, {"reg": "73728", "regFull": "RA-73728", "name": "рождественский", "nameDisplay": "Рождественский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49577.0, "doi": 39.52}, "2/5": {"dow": 49502.0, "doi": 40.71}, "3/5": {"dow": 49582.0, "doi": 39.33}, "3/6": {"dow": 49657.0, "doi": 38.14}}}, {"reg": "73775", "regFull": "RA-73775", "name": "рублёв", "nameDisplay": "Рублёв", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43828.0, "doi": 52.78}, "2/5": {"dow": 43903.0, "doi": 53.75}, "3/4": {"dow": 43908.0, "doi": 51.74}, "3/5": {"dow": 43983.0, "doi": 52.7}}}, {"reg": "73717", "regFull": "RA-73717", "name": "рябушинский", "nameDisplay": "Рябушинский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49792.0, "doi": 40.58}, "2/5": {"dow": 49717.0, "doi": 41.77}, "3/5": {"dow": 49797.0, "doi": 40.39}, "3/6": {"dow": 49872.0, "doi": 39.2}}}, {"reg": "73722", "regFull": "RA-73722", "name": "рязанов", "nameDisplay": "Рязанов", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49732.0, "doi": 40.67}, "2/5": {"dow": 49657.0, "doi": 41.86}, "3/5": {"dow": 49737.0, "doi": 40.48}, "3/6": {"dow": 49812.0, "doi": 39.29}}}, {"reg": "73705", "regFull": "RA-73705", "name": "салманов", "nameDisplay": "Салманов", "type": "A321neo", "mtow": 93500, "mlw": 79200, "maxFuel": 20900.0, "perf": {"2/6": {"dow": 52433.0, "doi": 40.76}, "2/5": {"dow": 52358.0, "doi": 39.58}, "3/5": {"dow": 52438.0, "doi": 38.2}, "3/6": {"dow": 52513.0, "doi": 39.38}}}, {"reg": "73173", "regFull": "RA-73173", "name": "северянин", "nameDisplay": "Северянин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43790.0, "doi": 52.65}, "2/5": {"dow": 43827.0, "doi": 53.62}, "3/4": {"dow": 43870.0, "doi": 51.61}, "3/5": {"dow": 43945.0, "doi": 52.57}}}, {"reg": "73776", "regFull": "RA-73776", "name": "семашко", "nameDisplay": "Семашко", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43816.0, "doi": 52.55}, "2/5": {"dow": 43891.0, "doi": 53.52}, "3/4": {"dow": 43896.0, "doi": 51.51}, "3/5": {"dow": 43971.0, "doi": 52.47}}}, {"reg": "73163", "regFull": "RA-73163", "name": "станиславский", "nameDisplay": "Станиславский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50400.0, "doi": 36.82}, "2/5": {"dow": 50325.0, "doi": 38.01}, "3/5": {"dow": 50405.0, "doi": 36.63}, "3/6": {"dow": 50480.0, "doi": 35.44}}}, {"reg": "73756", "regFull": "RA-73756", "name": "столетов", "nameDisplay": "Столетов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44205.0, "doi": 51.79}, "2/5": {"dow": 44242.0, "doi": 51.79}, "3/4": {"dow": 44242.0, "doi": 51.79}, "3/5": {"dow": 44242.0, "doi": 51.79}}}, {"reg": "73750", "regFull": "RA-73750", "name": "суворов", "nameDisplay": "Суворов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44420.0, "doi": 51.91}, "2/5": {"dow": 44457.0, "doi": 51.91}, "3/4": {"dow": 44457.0, "doi": 51.91}, "3/5": {"dow": 44457.0, "doi": 51.91}}}, {"reg": "73745", "regFull": "RA-73745", "name": "тамм", "nameDisplay": "Тамм", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44174.0, "doi": 49.77}, "2/5": {"dow": 44211.0, "doi": 49.77}, "3/4": {"dow": 44211.0, "doi": 49.77}, "3/5": {"dow": 44211.0, "doi": 49.77}}}, {"reg": "73772", "regFull": "RA-73772", "name": "тарасов", "nameDisplay": "Тарасов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43876.0, "doi": 52.61}, "2/5": {"dow": 43913.0, "doi": 52.61}, "3/4": {"dow": 43913.0, "doi": 52.61}, "3/5": {"dow": 43913.0, "doi": 52.61}}}, {"reg": "73719", "regFull": "RA-73719", "name": "тарковский", "nameDisplay": "Тарковский", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49780.0, "doi": 40.59}, "2/5": {"dow": 49780.0, "doi": 40.59}, "3/5": {"dow": 49780.0, "doi": 40.59}, "3/6": {"dow": 49780.0, "doi": 40.59}}}, {"reg": "73743", "regFull": "RA-73743", "name": "тимирязев", "nameDisplay": "Тимирязев", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 19000.0, "perf": {"2/4": {"dow": 44138.0, "doi": 49.48}, "2/5": {"dow": 44175.0, "doi": 49.48}, "3/4": {"dow": 44175.0, "doi": 49.48}, "3/5": {"dow": 44175.0, "doi": 49.48}}}, {"reg": "73167", "regFull": "RA-73167", "name": "толбухин", "nameDisplay": "Толбухин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43601.0, "doi": 52.02}, "2/5": {"dow": 43638.0, "doi": 52.02}, "3/4": {"dow": 43638.0, "doi": 52.02}, "3/5": {"dow": 43638.0, "doi": 52.02}}}, {"reg": "73174", "regFull": "RA-73174", "name": "толстой", "nameDisplay": "Толстой", "type": "Unknown", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {}}, {"reg": "73714", "regFull": "RA-73714", "name": "ушаков", "nameDisplay": "Ушаков", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50104.0, "doi": 37.05}, "2/5": {"dow": 50104.0, "doi": 37.05}, "3/5": {"dow": 50104.0, "doi": 37.05}, "3/6": {"dow": 50104.0, "doi": 37.05}}}, {"reg": "73169", "regFull": "RA-73169", "name": "федотов", "nameDisplay": "Федотов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43771.0, "doi": 52.1}, "2/5": {"dow": 43808.0, "doi": 52.1}, "3/4": {"dow": 43808.0, "doi": 52.1}, "3/5": {"dow": 43808.0, "doi": 52.1}}}, {"reg": "73761", "regFull": "RA-73761", "name": "феоктистов", "nameDisplay": "Феоктистов", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44225.0, "doi": 51.58}, "2/5": {"dow": 44262.0, "doi": 51.58}, "3/4": {"dow": 44262.0, "doi": 51.58}, "3/5": {"dow": 44262.0, "doi": 51.58}}}, {"reg": "73171", "regFull": "RA-73171", "name": "фет", "nameDisplay": "Фет", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43883.0, "doi": 51.81}, "2/5": {"dow": 43958.0, "doi": 53.11}, "3/4": {"dow": 43963.0, "doi": 52.07}, "3/5": {"dow": 44038.0, "doi": 53.03}}}, {"reg": "73768", "regFull": "RA-73768", "name": "флёров", "nameDisplay": "Флёров", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43712.0, "doi": 51.52}, "2/5": {"dow": 43749.0, "doi": 51.52}, "3/4": {"dow": 43749.0, "doi": 51.52}, "3/5": {"dow": 43749.0, "doi": 51.52}}}, {"reg": "73773", "regFull": "RA-73773", "name": "челюскин", "nameDisplay": "Челюскин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43900.0, "doi": 52.6}, "2/5": {"dow": 43975.0, "doi": 53.32}, "3/4": {"dow": 43980.0, "doi": 51.31}, "3/5": {"dow": 44055.0, "doi": 52.27}}}, {"reg": "73747", "regFull": "RA-73747", "name": "черенков", "nameDisplay": "Черенков", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44311.0, "doi": 51.71}, "2/5": {"dow": 44348.0, "doi": 51.71}, "3/4": {"dow": 44348.0, "doi": 51.71}, "3/5": {"dow": 44348.0, "doi": 51.71}}}, {"reg": "73766", "regFull": "RA-73766", "name": "шаляпин", "nameDisplay": "Шаляпин", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 43771.0, "doi": 51.62}, "2/5": {"dow": 43808.0, "doi": 51.62}, "3/4": {"dow": 43808.0, "doi": 51.62}, "3/5": {"dow": 43808.0, "doi": 51.62}}}, {"reg": "73725", "regFull": "RA-73725", "name": "шишкин", "nameDisplay": "Шишкин", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49497.0, "doi": 40.23}, "2/5": {"dow": 49497.0, "doi": 40.23}, "3/5": {"dow": 49497.0, "doi": 40.23}, "3/6": {"dow": 49497.0, "doi": 40.23}}}, {"reg": "73709", "regFull": "RA-73709", "name": "шнитке", "nameDisplay": "Шнитке", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 50405.0, "doi": 38.44}, "2/5": {"dow": 50330.0, "doi": 39.63}, "3/5": {"dow": 50410.0, "doi": 38.25}, "3/6": {"dow": 50485.0, "doi": 37.06}}}, {"reg": "73720", "regFull": "RA-73720", "name": "шукшин", "nameDisplay": "Шукшин", "type": "A321", "mtow": 93500, "mlw": 77800, "maxFuel": 18800.0, "perf": {"2/6": {"dow": 49525.0, "doi": 40.85}, "2/5": {"dow": 49525.0, "doi": 40.85}, "3/5": {"dow": 49525.0, "doi": 40.85}, "3/6": {"dow": 49525.0, "doi": 40.85}}}, {"reg": "73731", "regFull": "RA-73731", "name": "этуш", "nameDisplay": "Этуш", "type": "A320neo", "mtow": 79000, "mlw": 66000, "maxFuel": 18600.0, "perf": {"2/4": {"dow": 45620.0, "doi": 48.06}, "2/5": {"dow": 45695.0, "doi": 48.06}, "3/4": {"dow": 45700.0, "doi": 48.06}, "3/5": {"dow": 45775.0, "doi": 48.06}}}, {"reg": "73752", "regFull": "RA-73752", "name": "яблочков", "nameDisplay": "Яблочков", "type": "A320", "mtow": 79000, "mlw": 66000, "maxFuel": 18900.0, "perf": {"2/4": {"dow": 44361.0, "doi": 51.97}, "2/5": {"dow": 44398.0, "doi": 51.97}, "3/4": {"dow": 44398.0, "doi": 51.97}, "3/5": {"dow": 44398.0, "doi": 51.97}}}];
+
+    let currentAircraft = null;
+
+    const val = (id) => parseFloat(document.getElementById(id).value) || 0;
+    const setVal = (id, v) => document.getElementById(id).value = (v === "" || isNaN(v)) ? "" : v;
+
+    // --- NAVIGATION LOGIC ---
+    const navOrder = [
+        'acSearch', 
+        'crew', 
+        'payload', 
+        'trip', 
+        'contPerc', 
+        'alt', 
+        'final', 
+        'extra', 
+        'taxi'
+    ];
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            const activeId = document.activeElement.id;
+            const currentIndex = navOrder.indexOf(activeId);
+            
+            if (currentIndex !== -1 && currentIndex < navOrder.length - 1) {
+                event.preventDefault();
+                const nextId = navOrder[currentIndex + 1];
+                const nextEl = document.getElementById(nextId);
+                if (nextEl) {
+                    nextEl.focus();
+                    if (nextEl.tagName === 'INPUT') nextEl.select();
+                }
+            }
+        }
+    });
+
+    // --- LOCAL STORAGE LOGIC ---
+    function saveFormData() {
+        const inputs = document.querySelectorAll('input, select');
+        const data = {};
+        inputs.forEach(el => {
+            if (el.id) data[el.id] = el.value;
+        });
+        localStorage.setItem('fuelAppState', JSON.stringify(data));
+    }
+
+    function loadFormData() {
+        const saved = localStorage.getItem('fuelAppState');
+        if (saved) {
+            const data = JSON.parse(saved);
+            
+            // Сначала восстанавливаем поиск, чтобы загрузить самолет
+            if (data['acSearch']) {
+                document.getElementById('acSearch').value = data['acSearch'];
+                searchAircraft(); // Это вызовет загрузку самолета и пересчет
+            }
+            
+            // Даем время на отработку searchAircraft
+            setTimeout(() => {
+                for (const id in data) {
+                    const el = document.getElementById(id);
+                    if (el && id !== 'acSearch') { // acSearch уже обработан
+                         el.value = data[id];
+                    }
+                }
+                calculateAll();
+            }, 100);
+        }
+    }
+
+    // Слушатели для сохранения
+    document.addEventListener('input', saveFormData);
+    document.addEventListener('change', saveFormData);
+    // Загрузка при старте
+    document.addEventListener('DOMContentLoaded', loadFormData);
+
+
+    // --- PWA UPDATE LOGIC ---
+    if ('serviceWorker' in navigator) {
+        let newWorker;
+        navigator.serviceWorker.register('./sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+                newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showUpdateMessage();
+                    }
+                });
+            });
+        });
+
+        let refreshing;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (refreshing) return;
+            window.location.reload();
+            refreshing = true;
+        });
+    }
+
+    function showUpdateMessage() {
+        const notification = document.getElementById('updateNotification');
+        notification.style.display = 'flex';
+        setTimeout(() => { window.location.reload(); }, 3000);
+    }
+
+
+    // --- APP LOGIC ---
+
+    function toggleHelp() {
+        const modal = document.getElementById('helpModal');
+        if (modal.classList.contains('show')) {
+            modal.classList.remove('show');
+            setTimeout(() => { modal.style.display = 'none'; }, 300); 
+        } else {
+            modal.style.display = 'flex';
+            setTimeout(() => { modal.classList.add('show'); }, 10);
+        }
+    }
+
+    function closeAmbiguity() {
+        const modal = document.getElementById('ambiguityModal');
+        modal.classList.remove('show');
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+
+    function searchAircraft() {
+        let query = document.getElementById('acSearch').value.toLowerCase().trim();
+        const titleEl = document.getElementById('acSectionTitle');
+
+        if (query.length === 0) {
+            clearAircraftSelection();
+            return;
+        }
+
+        const potentialMatches = aircraftDB.filter(ac => {
+            return ac.reg.includes(query) || 
+                   ac.name.includes(query) ||
+                   ac.nameDisplay.toLowerCase().includes(query);
+        });
+
+        if (potentialMatches.length === 1) {
+            selectAircraft(potentialMatches[0]);
+        } 
+        else if (potentialMatches.length > 1) {
+            const exactNameMatches = potentialMatches.filter(ac => ac.name === query || ac.nameDisplay.toLowerCase() === query);
+            if (exactNameMatches.length > 1) {
+                showAmbiguity(exactNameMatches);
+            } else {
+                clearAircraftSelection();
+            }
+        } else {
+            clearAircraftSelection();
+        }
+    }
+
+    function clearAircraftSelection() {
+        currentAircraft = null;
+        const titleEl = document.getElementById('acSectionTitle');
+        if (titleEl) titleEl.textContent = "Aircraft";
+
+        // Очищаем системные поля
+        const fields = [
+            'dow', 'doi', 'zfw', 
+            'totalFuel', 'maxFuel', 'remFuel', 'minDev',
+            'tow', 'mtow', 'lw', 'mlw', 'rtow'
+        ];
+        
+        fields.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.value = '';
+                el.classList.remove('bg-green', 'bg-red');
+            }
+        });
+        
+        // Очищаем и экипаж
+        const crewSelect = document.getElementById('crew');
+        crewSelect.innerHTML = '';
+        
+        saveFormData(); // Сохраняем пустое состояние
+    }
+
+    function showAmbiguity(matches) {
+        const modal = document.getElementById('ambiguityModal');
+        const list = document.getElementById('ambiguityList');
+        list.innerHTML = '';
+
+        matches.forEach(ac => {
+            const div = document.createElement('div');
+            div.className = 'ambiguity-item';
+            div.textContent = `${ac.nameDisplay} (${ac.type} ${ac.regFull})`;
+            div.onclick = () => {
+                selectAircraft(ac);
+                closeAmbiguity();
+            };
+            list.appendChild(div);
+        });
+
+        modal.style.display = 'flex';
+        setTimeout(() => { modal.classList.add('show'); }, 10);
+    }
+
+    function selectAircraft(ac) {
+        currentAircraft = ac;
+        
+        const titleEl = document.getElementById('acSectionTitle');
+        if (titleEl) {
+            titleEl.textContent = `${ac.type} ${ac.regFull} ${ac.nameDisplay}`;
+        }
+
+        updateCrewOptions(ac.type);
+
+        setVal('mtow', ac.mtow);
+        setVal('mlw', ac.mlw);
+        setVal('maxFuel', ac.maxFuel);
+
+        calculateAll();
+        saveFormData();
+    }
+
+    function updateCrewOptions(acType) {
+        const crewSelect = document.getElementById('crew');
+        // Сохраняем текущее значение, если есть
+        const currentVal = crewSelect.value;
+        crewSelect.innerHTML = ''; 
+
+        if (!acType) return; 
+
+        let options = [];
+        let defaultVal = "";
+
+        if (acType && (acType.includes("A321"))) {
+            options = ["2/5", "2/6", "3/5", "3/6"];
+            defaultVal = "2/5";
+        } else {
+            options = ["2/4", "2/5", "3/4", "3/5"];
+            defaultVal = "2/4";
+        }
+
+        options.forEach(opt => {
+            const el = document.createElement('option');
+            el.value = opt;
+            el.textContent = opt;
+            crewSelect.appendChild(el);
+        });
+
+        // Пытаемся восстановить значение, иначе дефолт
+        if (options.includes(currentVal)) {
+            crewSelect.value = currentVal;
+        } else {
+            crewSelect.value = defaultVal;
+        }
+    }
+
+    function calcContFromPerc() {
+        calculateAll();
+    }
+
+    function setStatusColor(elementId, value, limit) {
+        const el = document.getElementById(elementId);
+        el.classList.remove('bg-green', 'bg-red');
+        
+        if (value > 0 && limit > 0) {
+            if (value <= limit) {
+                el.classList.add('bg-green');
+            } else {
+                el.classList.add('bg-red');
+            }
+        }
+    }
+
+    function calculateAll() {
+        // 1. Cont Fuel
+        const trip = val('trip');
+        const perc = val('contPerc');
+        let contVal = 0;
+        if (trip > 0) {
+            contVal = Math.round(trip * (perc / 100));
+            setVal('contVal', contVal);
+        } else {
+            setVal('contVal', '');
+        }
+
+        if (!currentAircraft) return;
+
+        // 2. Performance
+        const crewVal = document.getElementById('crew').value;
+        let dow = 0;
+        let doi = 0;
+
+        if (currentAircraft.perf && currentAircraft.perf[crewVal]) {
+            dow = currentAircraft.perf[crewVal].dow;
+            doi = currentAircraft.perf[crewVal].doi;
+        } else {
+             dow = currentAircraft.dow || 0; 
+             doi = 50.0;
+        }
+        
+        setVal('dow', dow);
+        setVal('doi', doi);
+
+        // 3. Weights
+        const payload = val('payload');
+        const zfw = dow + payload;
+        setVal('zfw', zfw);
+
+        // 4. Fuels
+        const alt = val('alt');
+        const final = val('final');
+        const extra = val('extra');
+        const taxi = val('taxi');
+        
+        const totalFuel = trip + contVal + alt + final + extra + taxi;
+        setVal('totalFuel', totalFuel);
+
+        // 5. Logic Updates (Prompt 14 & 15)
+        // TOW = ZFW + Total Fuel - Taxi
+        // Note: Usually TOW = ZFW + Takeoff Fuel. Takeoff Fuel = Total - Taxi.
+        // So TOW = ZFW + (Total - Taxi)
+        const takeoffFuel = Math.max(0, totalFuel - taxi);
+        const tow = zfw + takeoffFuel;
+        setVal('tow', tow);
+
+        // LW = TOW - Trip
+        const lw = tow - trip;
+        setVal('lw', lw);
+
+        // RTOW Logic
+        // If (Trip + MaxLW > MTOW) RTOW = MTOW; else RTOW = Trip + MaxLW
+        const mlw = val('mlw');
+        const mtow = val('mtow');
+        let rtow = 0;
+        
+        if ((trip + mlw) > mtow) {
+            rtow = mtow;
+        } else {
+            rtow = trip + mlw;
+        }
+        setVal('rtow', rtow);
+
+        // 6. Outputs
+        const remFuel = Math.max(0, totalFuel - taxi - trip);
+        setVal('remFuel', remFuel);
+
+        const minDev = final + alt;
+        setVal('minDev', minDev);
+
+        // 7. Colors
+        setStatusColor('totalFuel', totalFuel, val('maxFuel'));
+        setStatusColor('tow', tow, mtow);
+        setStatusColor('lw', lw, mlw);
+        
+        saveFormData();
+    }
+
+    function resetAll() {
+        document.querySelectorAll('input').forEach(i => i.value = '');
+        document.getElementById('acSearch').value = '';
+        clearAircraftSelection();
+        localStorage.removeItem('fuelAppState'); // Clear storage on hard reset
+    }
+</script>
+
+</body>
+</html>
