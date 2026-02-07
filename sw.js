@@ -1,17 +1,18 @@
-﻿const CACHE_NAME = 'myfuel-v1'; // МЕНЯЙТЕ ЭТУ ВЕРСИЮ ПРИ КАЖДОМ ОБНОВЛЕНИИ КОДА
+const CACHE_NAME = 'myfuel-v3'; // Новая версия кэша
 const ASSETS_TO_CACHE = [
-    './indexfuel.html',
-    './FuelIcon.png',
+    './indexfuel.html',   // ИСПРАВЛЕНО: теперь с маленькой буквы
+    './FuelIcon.png',     // Ваша картинка 192x192
     './manifest.json'
-    // Если у вас есть отдельные css или js файлы, добавьте их сюда
 ];
 
-// Установка SW и кэширование
+// Установка
 self.addEventListener('install', (event) => {
-    self.skipWaiting(); // Принудительно активируем новый SW сразу
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then((cache) => cache.addAll(ASSETS_TO_CACHE))
+            .then((cache) => {
+                return cache.addAll(ASSETS_TO_CACHE);
+            })
     );
 });
 
@@ -28,15 +29,13 @@ self.addEventListener('activate', (event) => {
             );
         })
     );
-    self.clients.claim(); // Захватываем контроль над всеми вкладками сразу
+    self.clients.claim();
 });
 
-// Перехват запросов (Network first, falling back to cache)
-// Для калькулятора лучше стратегия: сначала сеть, если нет — кэш
+// Перехват запросов
 self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(event.request)
             .catch(() => caches.match(event.request))
     );
-
 });
