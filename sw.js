@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myfuel-v3'; // Новая версия кэша
+const CACHE_NAME = 'myfuel-v4'; // Новая версия кэша
 const ASSETS_TO_CACHE = [
     './indexfuel.html',   // ИСПРАВЛЕНО: теперь с маленькой буквы
     './FuelIcon.png',     // Ваша картинка 192x192
@@ -39,3 +39,4 @@ self.addEventListener('fetch', (event) => {
             .catch(() => caches.match(event.request))
     );
 });
+
