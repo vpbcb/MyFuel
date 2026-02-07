@@ -1,6 +1,6 @@
 ﻿const CACHE_NAME = 'myfuel-v1'; // МЕНЯЙТЕ ЭТУ ВЕРСИЮ ПРИ КАЖДОМ ОБНОВЛЕНИИ КОДА
 const ASSETS_TO_CACHE = [
-    './Indexfuel.html',
+    './indexfuel.html',
     './FuelIcon.png',
     './manifest.json'
     // Если у вас есть отдельные css или js файлы, добавьте их сюда
@@ -38,4 +38,5 @@ self.addEventListener('fetch', (event) => {
         fetch(event.request)
             .catch(() => caches.match(event.request))
     );
+
 });
