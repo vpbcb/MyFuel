@@ -1,4 +1,4 @@
-const CACHE_NAME = 'myfuel-v2'; // Версия 4
+const CACHE_NAME = 'myfuel-v3'; // Версия 4
 const ASSETS_TO_CACHE = [
     './index.html',       // Теперь index.html
     './FuelIcon.png',
@@ -34,6 +34,7 @@ self.addEventListener('fetch', (event) => {
             .catch(() => caches.match(event.request))
     );
 });
+
 
 
 
