@@ -940,78 +940,73 @@
     }
 
     function searchAircraft() {
-        // 1. Получаем ввод, убираем пробелы, нижний регистр
         let query = document.getElementById('acSearch').value.toLowerCase().trim();
 
-        // Если пусто или 1 символ — очищаем
+        // Базовая проверка длины
         if (query.length < 2) {
             clearAircraftSelection();
             return;
         }
 
-        // 2. Логика синонимов (Retro -> Ретро, Скайтим -> Skyteam)
         let searchTerms = [query];
+
+        // ИСПРАВЛЕННАЯ ЛОГИКА СИНОНИМОВ:
         
-        // Если ввели английское "retro" -> ищем и русское "ретро"
-        if (query.includes('retro')) {
+        // 1. Для Retro: 
+        // Если введено "ret", "retr", "retro" (английские), ищем русское "ретро"
+        // Проверяем: начинается ли слово "retro" с того, что ввел пользователь?
+        if ('retro'.startsWith(query)) {
             searchTerms.push('ретро');
         }
-        // Если ввели русское "скай" -> ищем и "skyteam"
-        if (query.includes('скай')) {
+
+        // 2. Для Skyteam:
+        // Если введено "ска", "скай", "скайт" (русские), ищем английское "skyteam"
+        // Проверяем: начинается ли слово "скайтим" с того, что ввел пользователь?
+        if ('скайтим'.startsWith(query)) {
             searchTerms.push('skyteam');
         }
 
-        // 3. Фильтрация базы данных
+        // ФИЛЬТРАЦИЯ
         const matches = aircraftDB.filter(ac => {
-            return searchTerms.some(term => 
-                ac.reg.includes(term) || 
-                ac.name.toLowerCase().includes(term) ||
-                ac.nameDisplay.toLowerCase().includes(term)
-            );
+            return searchTerms.some(term => {
+                // ПРОВЕРКА 1: Это цифры? (Бортовой номер) - ищем везде
+                if (ac.reg.includes(term)) return true;
+
+                // ПРОВЕРКА 2: Это имя? - ищем С НАЧАЛА строки
+                if (ac.name.toLowerCase().startsWith(term)) return true;
+                if (ac.nameDisplay.toLowerCase().startsWith(term)) return true;
+                
+                return false;
+            });
         });
 
-        // 4. Логика отображения результатов
-        
-        // Если ничего не нашли
+        // ЛОГИКА ОТОБРАЖЕНИЯ
         if (matches.length === 0) {
             clearAircraftSelection();
             return;
         }
 
-        // Если нашли ровно один — БИНГО, выбираем
+        const isDigits = /^\d+$/.test(query);
+
+        // Блокировка коротких буквенных запросов (меньше 3 букв)
+        // Чтобы "Ре" или "Ск" не выдавали список.
+        if (!isDigits && query.length < 3) {
+            return; 
+        }
+
         if (matches.length === 1) {
             selectAircraft(matches[0]);
             return;
         }
 
-        // Если нашли несколько (> 1):
         if (matches.length > 1) {
-            const isDigits = /^\d+$/.test(query);
-
             if (isDigits) {
-                // ПО ЦИФРАМ: поведение оставляем как есть. 
-                // Если вариантов мало (<=5) — даем выбор. Если больше — ждем уточнения.
-                if (matches.length <= 5) {
-                    showAmbiguity(matches);
-                }
+                if (matches.length <= 5) showAmbiguity(matches);
             } else {
-                // ПО БУКВАМ:
-                // Блокируем показ таблички для коротких запросов (меньше 3 букв).
-                // Это решает проблему "Ре" -> табличка не вылезет.
-                if (query.length < 3) {
-                    // Ждем ввода 3-й буквы
-                } else {
-                    // Если >= 3 букв (например "Sky", "Рет", "Retro")
-                    // "Sky" или "Скай" -> найдет 2 самолета -> покажет выбор
-                    // "Рет" -> найдет 1 самолет ("Ретро") -> выберет его автоматически (блок выше)
-                    if (matches.length <= 10) {
-                        showAmbiguity(matches);
-                    }
-                }
+                if (matches.length <= 10) showAmbiguity(matches);
             }
         }
     }
-
     function clearAircraftSelection() {
         currentAircraft = null;
         const titleEl = document.getElementById('acSectionTitle');
