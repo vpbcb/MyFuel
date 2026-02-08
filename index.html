@@ -143,7 +143,58 @@
             text-transform: uppercase;
             letter-spacing: 1.5px;
         }
+/* SCROLL INDICATOR */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 20px;
+            
+            /* ПРИВЯЗКА К ГРАНИЦЕ КОНТЕНТА */
+            left: 50%; 
+            /* Сдвигаем от центра (250px - половина ширины сайта) немного внутрь */
+            margin-left: 210px; 
+            
+            width: 36px;
+            height: 36px;
+            background-color: var(--primary-blue);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+            z-index: 1000;
+            
+            /* Скрыта по умолчанию, появляется через JS */
+            opacity: 0;
+            transform: translateY(10px); /* Небольшая анимация подпрыгивания */
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            pointer-events: none; 
+        }
 
+        .scroll-indicator.visible {
+            opacity: 0.9; /* Немного прозрачная, чтобы видеть контент под ней */
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+
+        .scroll-indicator:hover {
+            opacity: 1;
+        }
+
+        .scroll-indicator svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+
+        /* АДАПТИВНОСТЬ: Если экран меньше ширины контента (телефоны), прижимаем просто к правому краю */
+        @media (max-width: 540px) {
+            .scroll-indicator {
+                left: auto;
+                margin-left: 0;
+                right: 15px;
+            }
+        }
         /* INPUTS & SELECTS */
         input, select {
             border: 1px solid transparent; 
@@ -629,6 +680,12 @@
     </div>
 </div>
 
+<div id="scrollIndicator" class="scroll-indicator" onclick="scrollToBottom()">
+    <svg viewBox="0 0 24 24">
+        <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+    </svg>
+</div>
+
 <script>
     // БАЗА ДАННЫХ
     const aircraftDB = [{"reg": "73753", "regFull": "RA-73753", "name": "ретро ливрея", "nameDisplay": "Ретро ливрея", "type": "A320", "mtow": 75500, "mlw": 66000, "maxFuel": 18900.0, "dow": 44196.0, "perf": {"2/4": {"dow": 44196.0, "doi": 52.09}, "2/5": {"dow": 44271.0, "doi": 53.06}, "3/4": {"dow": 44276.0, "doi": 51.05}, "3/5": {"dow": 44351.0, "doi": 52.01}}}, 
@@ -800,7 +857,41 @@
     document.addEventListener('change', saveFormData);
     document.addEventListener('DOMContentLoaded', loadFormData);
 
+// --- SCROLL INDICATOR LOGIC ---
+    const scrollIndicator = document.getElementById('scrollIndicator');
 
+    function checkScroll() {
+        // Высота всего документа минус высота видимой области
+        const scrollableHeight = document.documentElement.scrollHeight - window.innerHeight;
+        
+        // Текущая прокрутка
+        const scrolled = window.scrollY;
+
+        // Показываем стрелку, если:
+        // 1. Есть куда скроллить (scrollableHeight > 0)
+        // 2. Мы еще не дошли до конца (с небольшим запасом в 10px)
+        if (scrollableHeight > 0 && scrolled < (scrollableHeight - 10)) {
+            scrollIndicator.classList.add('visible');
+        } else {
+            scrollIndicator.classList.remove('visible');
+        }
+    }
+
+    function scrollToBottom() {
+        window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: 'smooth'
+        });
+    }
+
+    // Слушатели событий
+    window.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
+    
+    // Проверка при загрузке (через небольшую паузу, чтобы контент успел отрисоваться)
+    setTimeout(checkScroll, 100);
+    // И после загрузки данных формы
+    document.addEventListener('DOMContentLoaded', () => setTimeout(checkScroll, 500));
     // --- PWA UPDATE LOGIC ---
     if ('serviceWorker' in navigator) {
         let newWorker;
@@ -849,33 +940,75 @@
     }
 
     function searchAircraft() {
+        // 1. Получаем ввод, убираем пробелы, нижний регистр
         let query = document.getElementById('acSearch').value.toLowerCase().trim();
-        const titleEl = document.getElementById('acSectionTitle');
 
-        if (query.length === 0) {
+        // Если пусто или 1 символ — очищаем
+        if (query.length < 2) {
             clearAircraftSelection();
             return;
         }
 
-        const potentialMatches = aircraftDB.filter(ac => {
-            return ac.reg.includes(query) || 
-                   ac.name.includes(query) ||
-                   ac.nameDisplay.toLowerCase().includes(query);
+        // 2. Логика синонимов (Retro -> Ретро, Скайтим -> Skyteam)
+        let searchTerms = [query];
+        
+        // Если ввели английское "retro" -> ищем и русское "ретро"
+        if (query.includes('retro')) {
+            searchTerms.push('ретро');
+        }
+        // Если ввели русское "скай" -> ищем и "skyteam"
+        if (query.includes('скай')) {
+            searchTerms.push('skyteam');
+        }
+
+        // 3. Фильтрация базы данных
+        const matches = aircraftDB.filter(ac => {
+            return searchTerms.some(term => 
+                ac.reg.includes(term) || 
+                ac.name.toLowerCase().includes(term) ||
+                ac.nameDisplay.toLowerCase().includes(term)
+            );
         });
 
-        if (potentialMatches.length === 1) {
-            selectAircraft(potentialMatches[0]);
-        } 
-        else if (potentialMatches.length > 1) {
-            const exactNameMatches = potentialMatches.filter(ac => ac.name === query || ac.nameDisplay.toLowerCase() === query);
-            
-            if (exactNameMatches.length > 1) {
-                showAmbiguity(exactNameMatches);
-            } else {
-                clearAircraftSelection();
-            }
-        } else {
+        // 4. Логика отображения результатов
+        
+        // Если ничего не нашли
+        if (matches.length === 0) {
             clearAircraftSelection();
+            return;
+        }
+
+        // Если нашли ровно один — БИНГО, выбираем
+        if (matches.length === 1) {
+            selectAircraft(matches[0]);
+            return;
+        }
+
+        // Если нашли несколько (> 1):
+        if (matches.length > 1) {
+            const isDigits = /^\d+$/.test(query);
+
+            if (isDigits) {
+                // ПО ЦИФРАМ: поведение оставляем как есть. 
+                // Если вариантов мало (<=5) — даем выбор. Если больше — ждем уточнения.
+                if (matches.length <= 5) {
+                    showAmbiguity(matches);
+                }
+            } else {
+                // ПО БУКВАМ:
+                // Блокируем показ таблички для коротких запросов (меньше 3 букв).
+                // Это решает проблему "Ре" -> табличка не вылезет.
+                if (query.length < 3) {
+                    // Ждем ввода 3-й буквы
+                } else {
+                    // Если >= 3 букв (например "Sky", "Рет", "Retro")
+                    // "Sky" или "Скай" -> найдет 2 самолета -> покажет выбор
+                    // "Рет" -> найдет 1 самолет ("Ретро") -> выберет его автоматически (блок выше)
+                    if (matches.length <= 10) {
+                        showAmbiguity(matches);
+                    }
+                }
+            }
         }
     }
 
