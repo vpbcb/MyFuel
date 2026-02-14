@@ -140,7 +140,7 @@
             font-weight: 800;
             margin: 0;
             color: var(--dark-blue-text);
-            text-transform: none;
+            text-transform: uppercase;
             letter-spacing: 1.5px;
         }
 /* SCROLL INDICATOR */
@@ -853,32 +853,50 @@
     document.addEventListener('change', saveFormData);
     document.addEventListener('DOMContentLoaded', loadFormData);
 
-// --- SCROLL INDICATOR LOGIC (TOGGLE) ---
+// --- SCROLL INDICATOR LOGIC (SYMMETRIC) ---
     const scrollIndicator = document.getElementById('scrollIndicator');
 
     function checkScroll() {
-        // Высота всего документа минус высота окна = сколько можно проскроллить
+        // Сколько всего можно проскроллить
         const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-        // Текущая позиция
         const scrolled = window.scrollY;
 
-        // 1. Если скроллить вообще некуда (страница короткая), скрываем кнопку
+        // Если скроллить некуда, прячем кнопку
         if (maxScroll <= 0) {
             scrollIndicator.classList.remove('visible');
             return;
         }
 
-        // 2. Иначе кнопку показываем
         scrollIndicator.classList.add('visible');
 
-        // 3. Проверяем, достигли ли мы низа (с порогом 20px)
-        // Если прокручено больше, чем (максимум - 20px), значит мы внизу
-        if (scrolled >= maxScroll - 20) {
-            scrollIndicator.classList.add('up'); // Разворачиваем стрелку вверх
+        // ЛОГИКА ПОВОРОТА:
+        // Если мы прокрутили вниз больше чем на 50px (уехали от начала) -> стрелка ВВЕРХ
+        // Иначе (мы в самом верху) -> стрелка ВНИЗ
+        if (scrolled > 50) {
+            scrollIndicator.classList.add('up'); 
         } else {
-            scrollIndicator.classList.remove('up'); // Стрелка смотрит вниз
+            scrollIndicator.classList.remove('up');
         }
     }
+
+    function toggleScroll() {
+        if (scrollIndicator.classList.contains('up')) {
+            // Если стрелка смотрит вверх -> едем в самое НАЧАЛО
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            // Если стрелка смотрит вниз -> едем в самый КОНЕЦ
+            window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+        }
+    }
+
+    // Слушатели событий
+    window.addEventListener('scroll', checkScroll);
+    window.addEventListener('resize', checkScroll);
+    
+    // Инициализация
+    setTimeout(checkScroll, 100);
+    document.addEventListener('input', () => setTimeout(checkScroll, 300));
+    document.addEventListener('DOMContentLoaded', () => setTimeout(checkScroll, 500));
 
     function toggleScroll() {
         // Если на кнопке есть класс 'up', значит мы внизу -> едем ВВЕРХ
@@ -990,7 +1008,12 @@
     function clearAircraftSelection() {
         currentAircraft = null;
         const titleEl = document.getElementById('acSectionTitle');
-        if (titleEl) titleEl.textContent = "Aircraft";
+        
+        if (titleEl) {
+            titleEl.textContent = "Aircraft";
+            // ВАЖНО: Возвращаем капс, чтобы слово "AIRCRAFT" выглядело как остальные заголовки
+            titleEl.style.textTransform = ''; // Сброс к значению из CSS
+        }
 
         const fields = [
             'dow', 'doi', 'zfw', 
@@ -1010,6 +1033,7 @@
         crewSelect.innerHTML = '';
         
         saveFormData(); 
+        updateSearchStyle();
     }
 
     function showAmbiguity(matches) {
@@ -1040,16 +1064,17 @@
         }).join(' ');
     }
 
-    function selectAircraft(ac) {
+   function selectAircraft(ac) {
         currentAircraft = ac;
         
         const titleEl = document.getElementById('acSectionTitle');
         if (titleEl) {
-            // БЫЛО: titleEl.textContent = `${ac.type} ${ac.regFull} ${ac.nameDisplay}`;
-            
-            // СТАЛО: Красивое имя (первая буква большая, остальные маленькие)
+            // Формируем красивое имя
             const prettyName = capitalize(ac.nameDisplay || ac.name);
             titleEl.textContent = `${ac.type} ${ac.regFull} ${prettyName}`;
+            
+            // ВАЖНО: Отключаем принудительный капс, чтобы имя было красивым (Mendeleev)
+            titleEl.style.textTransform = 'none'; 
         }
 
         updateCrewOptions(ac.type);
