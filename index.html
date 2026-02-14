@@ -140,7 +140,7 @@
             font-weight: 800;
             margin: 0;
             color: var(--dark-blue-text);
-            text-transform: uppercase;
+            text-transform: none;
             letter-spacing: 1.5px;
         }
 /* SCROLL INDICATOR */
@@ -933,45 +933,30 @@
     function searchAircraft() {
         let query = document.getElementById('acSearch').value.toLowerCase().trim();
 
-        // Базовая проверка длины
+        // Базовая проверка
         if (query.length < 2) {
             clearAircraftSelection();
             return;
         }
 
+        // Синонимы (Retro, Skyteam)
         let searchTerms = [query];
+        if ('retro'.startsWith(query)) searchTerms.push('ретро');
+        if ('скайтим'.startsWith(query)) searchTerms.push('skyteam');
 
-        // ИСПРАВЛЕННАЯ ЛОГИКА СИНОНИМОВ:
-        
-        // 1. Для Retro: 
-        // Если введено "ret", "retr", "retro" (английские), ищем русское "ретро"
-        // Проверяем: начинается ли слово "retro" с того, что ввел пользователь?
-        if ('retro'.startsWith(query)) {
-            searchTerms.push('ретро');
-        }
-
-        // 2. Для Skyteam:
-        // Если введено "ска", "скай", "скайт" (русские), ищем английское "skyteam"
-        // Проверяем: начинается ли слово "скайтим" с того, что ввел пользователь?
-        if ('скайтим'.startsWith(query)) {
-            searchTerms.push('skyteam');
-        }
-
-        // ФИЛЬТРАЦИЯ
+        // Поиск
         const matches = aircraftDB.filter(ac => {
             return searchTerms.some(term => {
-                // ПРОВЕРКА 1: Это цифры? (Бортовой номер) - ищем везде
+                // Цифры ищем везде
                 if (ac.reg.includes(term)) return true;
-
-                // ПРОВЕРКА 2: Это имя? - ищем С НАЧАЛА строки
+                // Имена ищем строго с начала
                 if (ac.name.toLowerCase().startsWith(term)) return true;
                 if (ac.nameDisplay.toLowerCase().startsWith(term)) return true;
-                
                 return false;
             });
         });
 
-        // ЛОГИКА ОТОБРАЖЕНИЯ
+        // Если ничего не нашли
         if (matches.length === 0) {
             clearAircraftSelection();
             return;
@@ -979,23 +964,27 @@
 
         const isDigits = /^\d+$/.test(query);
 
-        // Блокировка коротких буквенных запросов (меньше 3 букв)
-        // Чтобы "Ре" или "Ск" не выдавали список.
-        if (!isDigits && query.length < 3) {
-            return; 
-        }
-
-        if (matches.length === 1) {
-            selectAircraft(matches[0]);
+        // --- ЛОГИКА ДЛЯ ЦИФР ---
+        if (isDigits) {
+            // Если ввели цифры, действуем ТОЛЬКО если найден ровно один самолет
+            if (matches.length === 1) {
+                selectAircraft(matches[0]);
+            }
+            // Если найдено 2 и более (как 73779 и 73179) — ничего не показываем, ждем
             return;
         }
 
-        if (matches.length > 1) {
-            if (isDigits) {
-                if (matches.length <= 5) showAmbiguity(matches);
-            } else {
-                if (matches.length <= 10) showAmbiguity(matches);
-            }
+        // --- ЛОГИКА ДЛЯ БУКВ ---
+        // (Тут оставляем список выбора, если ввели Skyteam или Скайтим)
+        
+        // Блокируем слишком короткие буквенные запросы (< 3 букв)
+        if (query.length < 3) return;
+
+        if (matches.length === 1) {
+            selectAircraft(matches[0]);
+        } else if (matches.length <= 10) {
+            // Для букв показываем выбор (Skyteam -> 2 борта)
+            showAmbiguity(matches);
         }
     }
     function clearAircraftSelection() {
@@ -1043,12 +1032,24 @@
         setTimeout(() => { modal.classList.add('show'); }, 10);
     }
 
+// Функция для превращения "TEXT" в "Text"
+    function capitalize(str) {
+        if (!str) return '';
+        return str.toLowerCase().split(' ').map(word => {
+            return word.charAt(0).toUpperCase() + word.slice(1);
+        }).join(' ');
+    }
+
     function selectAircraft(ac) {
         currentAircraft = ac;
         
         const titleEl = document.getElementById('acSectionTitle');
         if (titleEl) {
-            titleEl.textContent = `${ac.type} ${ac.regFull} ${ac.nameDisplay}`;
+            // БЫЛО: titleEl.textContent = `${ac.type} ${ac.regFull} ${ac.nameDisplay}`;
+            
+            // СТАЛО: Красивое имя (первая буква большая, остальные маленькие)
+            const prettyName = capitalize(ac.nameDisplay || ac.name);
+            titleEl.textContent = `${ac.type} ${ac.regFull} ${prettyName}`;
         }
 
         updateCrewOptions(ac.type);
@@ -1059,6 +1060,7 @@
 
         calculateAll();
         saveFormData();
+        updateSearchStyle();
     }
 
     function updateCrewOptions(acType) {
